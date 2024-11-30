@@ -59,7 +59,9 @@ for non-nixos users:
 ```bash
 bun run src/index.js 
 ```
-```Docker
+Docker
+
+```
 docker build -t lurker .
 docker run --name=lurker -d -p 3000:3000 lurker
 ```
