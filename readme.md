@@ -59,6 +59,10 @@ for non-nixos users:
 ```bash
 bun run src/index.js 
 ```
+```Docker
+docker build -t lurker .
+docker run --name=lurker -d -p 3000:3000 lurker
+```
 
 ### usage
 
@@ -100,3 +104,4 @@ nix build .#lurker  # build the thing
 - [x] set home to sum of subs
 - [x] styles for info-containers
 - [x] support 'more comments'
+
