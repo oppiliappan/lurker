@@ -13,6 +13,7 @@ html
         p
           each s in subs 
             - var subreddit = s.subreddit
+            - var isSubbed = subs.some(sub => sub.subreddit === subreddit)
             div.sub-title
               h4
                 a(href=`/r/${subreddit}`) 
