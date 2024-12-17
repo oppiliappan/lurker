@@ -1,5 +1,7 @@
 ### lurker
 
+This is a fork of https://github.com/oppiliappan/lurker/ and I respect their work! It adds `SSO` via Remote Header Authorization.
+
 lurker is a selfhostable, read-only reddit client. it is
 better than old-reddit because:
 

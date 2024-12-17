@@ -1,6 +1,7 @@
 const express = require("express");
 const he = require("he");
 const jwt = require("jsonwebtoken");
+const crypto = require('crypto');
 const geddit = require("../geddit.js");
 const { JWT_KEY } = require("../");
 const { db } = require("../db");
@@ -10,51 +11,123 @@ const { validateInviteToken } = require("../invite");
 const router = express.Router();
 const G = new geddit.Geddit();
 
+function generateRandomPassword(length = 12) {
+  const bytes = crypto.randomBytes(length);
+  return bytes.toString('base64').slice(0, length);  // Convert to base64 and slice to desired length
+}
+
+// Helper function to set the auth token cookie
+function setAuthTokenCookie(res, username, userId) {
+  const token = jwt.sign({ username, id: userId }, JWT_KEY, { expiresIn: "5d" });
+  res.cookie("auth_token", token, {
+    httpOnly: true,
+    secure: true,
+    maxAge: 5 * 24 * 60 * 60 * 1000, // 5 days
+    sameSite: 'Strict',
+  });
+}
+
+// Middleware to check if user is logged in via HTTP headers
+async function loginViaHeaders(req, res, next) {
+  const remoteUser = req.headers['remote-user'] || req.headers['HTTP_AUTH_USER'];
+  const remoteGroups = req.headers['remote-groups'] ? req.headers['remote-groups'].split(',') : [];
+
+  // We need env.REMOTE_HEADER_LOGIN=true to use SSO. Also check if remoteUser header is missing
+  if (!(process.env.REMOTE_HEADER_LOGIN || false) || !remoteUser) {
+    if(process.env.REMOTE_HEADER_LOGIN) console.log("Remote user header missing");
+    return res.redirect("/login");  // Redirect to login page if missing
+  }
+
+  // If remoteUser is present, set user info and validate
+  req.user = {
+    username: remoteUser,  // Store username in req.user
+    isAdmin: remoteGroups.includes(process.env.ADMIN_GROUP || 'admin'),  // Check if user is an admin
+    validated: true,  // Flag to mark user as validated via headers
+  };
+
+  // Check if the user already exists in the database
+  let existingUser = db.query("SELECT * FROM users WHERE username = $username").get({ username: remoteUser });
+
+  if (!existingUser) {
+    // If user does not exist, automatically register them
+    try {
+      const randomPassword = generateRandomPassword(52);
+      const hashedPassword = await Bun.password.hash(randomPassword);  // Hash the random password
+
+      const insertedRecord = db.query(
+        "INSERT INTO users (username, password_hash, isAdmin) VALUES ($username, $hashedPassword, $isAdmin)"
+      ).run({
+        username: remoteUser,
+        hashedPassword,
+        isAdmin: 0,
+      });
+
+      const userId = insertedRecord.lastInsertRowid;
+      setAuthTokenCookie(res, remoteUser, userId);
+
+      const redirectTo = req.query.direct || '/';
+      return res.redirect(redirectTo);
+    } catch (error) {
+      console.error("Error creating user from headers:", error);
+      return res.render("login", { message: "Error creating account, please try again." });
+    }
+  } else {
+    // Set user id from the database record
+    req.user.id = existingUser.id;
+
+    // Check if the isAdmin value in the database matches the remote header
+    if (remoteGroups.length > 0 && existingUser.isAdmin !== req.user.isAdmin) {
+      // Update the user's isAdmin field to match the header
+      db.query("UPDATE users SET isAdmin = $isAdmin WHERE id = $id")
+        .run({
+          isAdmin: req.user.isAdmin ? 1 : 0,
+          id: req.user.id,
+        });
+    }
+
+    setAuthTokenCookie(res, remoteUser, existingUser.id);
+    const redirectTo = req.query.direct || '/';
+    return res.redirect(redirectTo);
+  }
+}
+
 // GET /
 router.get("/", authenticateToken, async (req, res) => {
-	const subs = db
-		.query("SELECT * FROM subscriptions WHERE user_id = $id")
-		.all({ id: req.user.id });
-	if (subs.length === 0) {
-		res.redirect("/r/all");
-	} else {
-		const p = subs.map((s) => s.subreddit).join("+");
-		res.redirect(`/r/${p}`);
-	}
+  const subs = db.query("SELECT * FROM subscriptions WHERE user_id = $id").all({ id: req.user.id });
+  if (subs.length === 0) {
+    res.redirect("/r/all");
+  } else {
+    const p = subs.map((s) => s.subreddit).join("+");
+    res.redirect(`/r/${p}`);
+  }
 });
 
 // GET /r/:id
 router.get("/r/:subreddit", authenticateToken, async (req, res) => {
-	const subreddit = req.params.subreddit;
-	const isMulti = subreddit.includes("+");
-	const query = req.query ? req.query : {};
-	if (!query.sort) {
-		query.sort = "hot";
-	}
+  const subreddit = req.params.subreddit;
+  const isMulti = subreddit.includes("+");
+  const query = req.query || {};
+  query.sort = query.sort || "hot";
 
-	let isSubbed = false;
-	if (!isMulti) {
-		isSubbed =
-			db
-				.query(
-					"SELECT * FROM subscriptions WHERE user_id = $id AND subreddit = $subreddit",
-				)
-				.get({ id: req.user.id, subreddit }) !== null;
-	}
-	const postsReq = G.getSubmissions(query.sort, `${subreddit}`, query);
-	const aboutReq = G.getSubreddit(`${subreddit}`);
+  let isSubbed = false;
+  if (!isMulti) {
+    isSubbed = db.query("SELECT * FROM subscriptions WHERE user_id = $id AND subreddit = $subreddit")
+                 .get({ id: req.user.id, subreddit }) !== null;
+  }
 
-	const [posts, about] = await Promise.all([postsReq, aboutReq]);
+  const postsReq = G.getSubmissions(query.sort, subreddit, query);
+  const aboutReq = G.getSubreddit(subreddit);
+  const [posts, about] = await Promise.all([postsReq, aboutReq]);
 
-	res.render("index", {
-		subreddit,
-		posts,
-		about,
-		query,
-		isMulti,
-		user: req.user,
-		isSubbed,
-	});
+  res.render("index", {
+    subreddit,
+    posts,
+    about,
+    query,
+    isMulti,
+    user: req.user,
+    isSubbed,
+  });
 });
 
 // GET /comments/:id
@@ -283,14 +356,8 @@ router.post("/register", validateInviteToken, async (req, res) => {
 				isAdmin: req.isFirstUser ? 1 : 0,
 			});
 		const id = insertedRecord.lastInsertRowid;
-		const token = jwt.sign({ username, id }, JWT_KEY, { expiresIn: "5d" });
-		res
-			.status(200)
-			.cookie("auth_token", token, {
-				httpOnly: true,
-				maxAge: 5 * 24 * 60 * 60 * 1000,
-			})
-			.redirect("/");
+		setAuthTokenCookie(res, username, id);
+		res.status(200).redirect("/");
 	} catch (err) {
 		return res.render("register", {
 			message: "error registering user, try again later",
@@ -298,40 +365,47 @@ router.post("/register", validateInviteToken, async (req, res) => {
 	}
 });
 
-router.get("/login", async (req, res) => {
-	res.render("login", req.query);
+// GET /login
+router.get("/login", async (req, res, next) => {
+  const token = req.cookies.auth_token;
+  if (token) {
+    return res.redirect("/");
+  }
+  if (req.headers['remote-user']) {
+    return loginViaHeaders(req, res, next); 
+  }
+  res.render("login", { message: req.query.message });
 });
 
-// POST /login
+// POST /login (form submission)
 router.post("/login", async (req, res) => {
-	const { username, password } = req.body;
-	const user = db
-		.query("SELECT * FROM users WHERE username = $username")
-		.get({ username });
-	if (user && (await Bun.password.verify(password, user.password_hash))) {
-		const token = jwt.sign({ username, id: user.id }, JWT_KEY, {
-			expiresIn: "5d",
-		});
-		res
-			.cookie("auth_token", token, {
-				httpOnly: true,
-				maxAge: 5 * 24 * 60 * 60 * 1000,
-			})
-			.redirect(req.query.redirect || "/");
-	} else {
-		res.render("login", {
-			message: "invalid credentials, try again",
-		});
-	}
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    return res.render("login", { message: "Both username and password are required." });
+  }
+
+  const user = db.query("SELECT * FROM users WHERE username = $username").get({ username });
+
+  if (user && (await Bun.password.verify(password, user.password_hash))) {
+    try {
+      setAuthTokenCookie(res, username, user.id);
+      const redirectTo = req.query.direct || '/';
+      return res.redirect(redirectTo);
+    } catch (error) {
+      console.error("Error signing JWT:", error);
+      res.render("login", { message: "Something went wrong, try again later." });
+    }
+  } else {
+    // Invalid credentials
+    res.render("login", { message: "Invalid credentials, try again." });
+  }
 });
 
-// this would be post, but i cant stuff it in a link
+// GET /logout (clear JWT and log out user)
 router.get("/logout", (req, res) => {
-	res.clearCookie("auth_token", {
-		httpOnly: true,
-		secure: true,
-	});
-	res.redirect("/login");
+  res.clearCookie("auth_token", { httpOnly: true, secure: true });
+  res.redirect("/login");
 });
 
 // POST /subscribe

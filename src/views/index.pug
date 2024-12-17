@@ -26,11 +26,6 @@ html
                 button(onclick=`toggleSub('${subreddit}')` id=`thinger_${subreddit}`) subscribe
         if about && !isMulti
           div.about #{about.public_description}
-        else 
-          div.about 
-            | consider donating to&nbsp;
-            a(href="https://donate.stripe.com/dR62bTaZH1295Da4gg") oppiliappan
-            |, author of lurker
         hr
         details
           summary.sorting sorting by #{query.sort + (query.t?' '+query.t:'')}
