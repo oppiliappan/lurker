@@ -64,13 +64,13 @@ $ docker pull ghcr.io/oppiliappan/lurker:latest
 # quirk of using nix, it should not affect usage
 $ docker image ls
 REPOSITORY                   TAG       IMAGE ID       CREATED        SIZE
-ghcr.io/oppiliappan/lurker   latest    ba3733164889   54 years ago   186MB
+ghcr.io/oppiliappan/lurker   latest    ba3733164889   ???            227MB
 
 # start lurker in a container
 #
 # lurker stores data in /data,
 # so create a volume on the host accordingly:
-$ docker run -v /your/host/lurker-data:/data ghcr.io/oppiliappan/lurker:latest
+$ docker run -v /your/host/lurker-data:/data -p 3000 ghcr.io/oppiliappan/lurker:latest
 ```
 
 or with just [bun](https://bun.sh/):

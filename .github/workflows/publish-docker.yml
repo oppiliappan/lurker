@@ -13,13 +13,8 @@ jobs:
       - name: checkout repository
         uses: actions/checkout@v4
 
-      - name: install nix
-        uses: cachix/install-nix-action@v27
-        with:
-          github_access_token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: build docker image
-        run: nix build -L .#dockerImage
+        run: docker build .
 
       - name: log in to github container registry
         uses: docker/login-action@v3
