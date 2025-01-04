@@ -70,6 +70,20 @@ ghcr.io/oppiliappan/lurker   latest    ba3733164889   ???            227MB
 $ docker run -v /your/host/lurker-data:/data -p 3000 ghcr.io/oppiliappan/lurker:latest
 ```
 
+or with docker compose:
+
+```yaml
+version: '3'
+services:
+  lurker:
+    image: ghcr.io/oppiliappan/lurker:latest
+    container_name: lurker
+    volumes:
+      - /your/host/lurker-data:/data
+    ports:
+      - "3000:3000"
+```
+
 or with just [bun](https://bun.sh/):
 
 ```bash
