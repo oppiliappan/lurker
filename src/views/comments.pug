@@ -47,23 +47,24 @@ html
         h2.post-title
           != post.title
 
-        if isPostGallery(post)
-          div.gallery
-            each item in postGalleryItems(post)
-              div.gallery-item
-                div.gallery-item-idx
-                  | #{`${item.idx}/${item.total}`}
-                a(href=`/media/${item.url}`)
-                  img(src=item.url loading="lazy")
-        else if isPostImage(post)
-          a(href=`/media/${post.url}`)
-            img(src=post.url).post-media
-        else if isPostVideo(post)
-          - var url = post.secure_media.reddit_video.dash_url
-          video(controls data-dashjs-player src=`${url}`).post-media
-        else if isPostLink(post)
-          a(href=post.url)
-            | #{post.url}
+        div.image-viewer.main-content
+          if isPostGallery(post)
+            div.gallery
+              each item in postGalleryItems(post)
+                div.gallery-item
+                  a(href=`/media/${item.url}`)
+                    img(src=item.url loading="lazy")
+                  div.gallery-item-idx
+                    | #{`${item.idx}/${item.total}`}
+          else if isPostImage(post)
+            a(href=`/media/${post.url}`)
+              img(src=post.url).post-media
+          else if isPostVideo(post)
+            - var url = post.secure_media.reddit_video.dash_url
+            video(controls data-dashjs-player src=`${url}`).post-media
+          else if isPostLink(post)
+            a(href=post.url)
+              | #{post.domain} ↗
 
         if post.selftext_html
           div.self-text

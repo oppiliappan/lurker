@@ -11,6 +11,9 @@
   --link-visited-color: #999;
   --accent: var(--link-color);
   --error-text-color: red;
+  --border-radius-card: 4vmin;
+  --border-radius-media: 3vmin;
+  --border-radius-preview: 2vmin;
 
   font-family: Inter, sans-serif;
   font-feature-settings: 'ss01' 1, 'kern' 1, 'liga' 1, 'cv05' 1, 'dlig' 1, 'ss01' 1, 'ss07' 1, 'ss08' 1;
@@ -45,10 +48,6 @@ body {
   overflow-x: hidden;
   background-color: var(--bg-color);
   color: var(--text-color);
-}
-
-body:has(details.card[open]) {
-  overflow: hidden;
 }
 
 body.media-maximized {
@@ -169,7 +168,7 @@ nav {
 
 .post-container.card {
   border: 1px solid var(--bg-color-muted);
-  border-radius: 8px;
+  border-radius: var(--border-radius-card);
   display: block;
 }
 
@@ -198,29 +197,18 @@ nav {
   text-overflow: ellipsis;
 }
 
-.media-preview.card {
+.image-viewer {
   position: relative;
-  padding: 0.3rem;
-  padding-bottom: 0.3rem;
+  margin: 0.9rem;
+  margin-bottom: 0.3rem;
 }
 
-.media-preview.card > img {
+.image-viewer:not(:has(details)) {
+  margin: unset;
+}
+
+.image-viewer > img {
   cursor: pointer;
-}
-
-.gallery.card {
-  align-items: center;
-  scroll-snap-type: both mandatory;
-}
-
-.gallery-item.card {
-  max-width: 100%;
-  width: 100%;
-  scroll-snap-align: center;
-}
-
-.gallery-item-idx.card {
-  text-align: center;
 }
 
 .spoiler {
@@ -228,7 +216,7 @@ nav {
   /* Safari on iOS <= 17 */
   -webkit-backdrop-filter: blur(3rem);
   backdrop-filter: blur(3rem);
-  border-radius: 4px;
+  border-radius: var(--border-radius-preview);
 
   position: absolute;
   top: 0;
@@ -247,7 +235,7 @@ nav {
   z-index: 10;
 }
 
-.gallery-item-idx.card,
+.gallery-item-idx,
 .spoiler > h2 {
   text-shadow: 0.1rem 0.1rem 1rem var(--bg-color-muted);
 }
@@ -294,17 +282,14 @@ summary::before {
   object-fit: cover;
   width: 4rem;
   height: 4rem;
+  border-radius: var(--border-radius-preview);
 }
 
-.media-preview.card {
-  padding: unset;
-}
+.image-viewer img,
+.image-viewer video {
+  border-radius: var(--border-radius-media);
 
-.media-preview.card img,
-.media-preview.card video {
-  border-radius: 6px;
-
-  max-height: 40vh;
+  max-height: 50vh;
   max-width: 95%;
 
   display: block;
@@ -317,21 +302,26 @@ summary::before {
   object-fit: fill;
 }
 
-.media-preview.card a {
-  font-size: 1.5rem;
-  padding: unset;
-  padding-left: 1rem;
+.image-viewer.main-content img,
+.image-viewer.main-content video {
+  max-height: 70vh;
 }
 
-.media-preview.card a:has(img) {
+.image-viewer.main-content a {
+  margin: unset;
+}
+
+.image-viewer a:has(img) {
   font-size: 0rem;
   padding: unset;
 }
 
-.media-preview a {
-  font-size: 2rem;
+.media-preview a,
+.image-viewer a {
+  font-size: 1.5rem;
   text-decoration: none;
-  padding: 1rem;
+  padding: unset;
+  margin: 1rem;
 }
 
 .media-maximized {
@@ -372,6 +362,11 @@ form {
 }
 
 @media (min-width: 768px) {
+  :root {
+    --border-radius-card: 2vmin;
+    --border-radius-media: 1vmin;
+    --border-radius-preview: 0.5vmin;  
+  }
   .post, .comments-container, .hero, .header, .footer {
     flex: 1 1 90%;
     width: 90%;
@@ -382,12 +377,12 @@ form {
     width: 5rem;
     height: 5rem;
   }
-  .media-preview.card img,
-  .media-preview.card video
+  .image-viewer img,
+  .image-viewer video
   {
-    max-height: 50vh;
+    max-height: 45vh;
   }
-  .media-preview.card a {
+  .image-viewer a {
     font-size: 1rem;
     margin: 0.7rem;
     padding: initial;
@@ -414,6 +409,10 @@ form {
 }
 
 @media (min-width: 1080px) {
+  :root {
+    --border-radius-card: 1vmin;
+    --border-radius-media: 1vmin;
+  }
   .post, .comments-container, .hero, .header, .footer {
     flex: 1 1 60%;
     width: 60%;
@@ -424,18 +423,18 @@ form {
     width: 5rem;
     height: 5rem;
   }
-  .media-preview.card img,
-  .media-preview.card video
+  .image-viewer img,
+  .image-viewer video
   {
-    max-height: 30vh;
+    max-height: 35vh;
   }
   .media-preview a {
     font-size: 2rem;
     padding: 2rem;
   }
-  .media-preview.card a {
+  .image-viewer a {
     font-size: 1rem;
-    margin: 0.5rem;
+    margin: 1rem;
     padding: initial;
   }
   .self-text.card {
@@ -460,14 +459,18 @@ form {
 }
 
 @media (min-width: 2560px) {
+  :root {
+    --border-radius-card: 0.75vmin;
+    --border-radius-media: 0.75vmin;
+  }
   .post, .comments-container, .hero, .header, .footer {
     flex: 1 1 40%;
     width: 40%;
   }
-  .media-preview.card img,
-  .media-preview.card video
+  .image-viewer img,
+  .image-viewer video
   {
-    max-height: 20vh;
+    max-height: 30vh;
   }
   .sort-opts,
   .view-opts {
@@ -494,7 +497,7 @@ form {
   margin-top: 10px;
 }
 
-.post-container {
+.post-info {
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -648,16 +651,20 @@ a {
   overflow-x: auto;
   position: relative;
   padding: 5px;
+  align-items: center;
+  scroll-snap-type: both mandatory;
 }
 
 .gallery-item {
   flex: 0 0 auto;
   margin-right: 10px;
+  max-width: 100%;
+  width: 100%;
+  scroll-snap-align: center;
 }
 
-.gallery img {
-    width: auto;
-    max-height: 500px;
+.gallery-item-idx {
+  text-align: center;
 }
 
 .post-title {
