@@ -6,7 +6,6 @@ include ../utils
 
 - var post = data.post
 - var postMedia = post.crosspost_parent_list && post.crosspost_parent_list.length > 0 ? post.crosspost_parent_list[0] : post
-- console.log('Is crosspost:', !!post.crosspost_parent_list, 'Post hint:', post.post_hint, 'PostMedia hint:', postMedia. post_hint, 'PostMedia URL:', postMedia.url)
 - var comments = data.comments
 - var viewQuery = 'view=' + (query && query.view ? query.view : 'compact')
 - var sortQuery = 'sort=' + (query && query.sort ? query.sort + (query.t ? '&t=' + query.t : '') : 'hot')
