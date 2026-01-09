@@ -408,6 +408,12 @@ function unescape_submission(response) {
 	const comments = response.comments;
 
 	unescape_selftext(post);
+	
+	// Also unescape crosspost parent selftext if present
+	if (post.crosspost_parent_list && post.crosspost_parent_list.length > 0) {
+		unescape_selftext(post.crosspost_parent_list[0]);
+	}
+	
 	comments.forEach(unescape_comment);
 
 	return { post, comments };
