@@ -1,40 +1,54 @@
 -
+  function getPostData(p) {
+    if (p.crosspost_parent_list && p.crosspost_parent_list.length > 0) {
+      return p.crosspost_parent_list[0];
+    }
+    return p;
+  }
+-
   function isPostMedia(p) {
-    return isPostImage(p) || isPostGallery(p) || isPostVideo(p);
+    var data = getPostData(p);
+    return isPostImage(data) || isPostGallery(data) || isPostVideo(data);
   }
 -
   function isPostGallery(p) {
-    return (p.is_gallery && p.is_gallery == true);
+    var data = getPostData(p);
+    return (data.is_gallery && data.is_gallery == true);
   }
 -
   function isPostImage(p) {
+    var data = getPostData(p);
     const imgRe = /\.(png|jpg|jpeg|gif|webp|bmp|tiff|svg)$/i;
-    return (p.post_hint == "image" && p.thumbnail && p.thumbnail != "self" && p.thumbnail != "default")
-      || imgRe.test(p.url);
+    return (data.post_hint == "image" && data.thumbnail && data.thumbnail != "self" && data.thumbnail != "default")
+      || imgRe.test(data.url);
   }
 -
   function postThumbnail(p) {
-    if (p.over_18) {
+    var data = getPostData(p);
+    if (data.over_18) {
       return "/nsfw.svg";
-    } else if (p.thumbnail == "spoiler") {
+    } else if (data.thumbnail == "spoiler") {
       return "/spoiler.svg";
-    } else if (p.thumbnail == "image" || p.thumbnail == "") {
-      return p.url;
+    } else if (data.thumbnail == "image" || data.thumbnail == "") {
+      return data.url;
     } else {
-      return p.thumbnail;
+      return data.thumbnail;
     }
   }
 -
   function isPostVideo(p) {
-    return (p.post_hint == "hosted:video");
+    var data = getPostData(p);
+    return (data.post_hint == "hosted:video");
   }
 -
   function isPostLink(p) {
-    return (p.post_hint == "link");
+    var data = getPostData(p);
+    return (data.post_hint == "link");
   }
 -
   function imgExt(p, id) {
-    var metadata = p.media_metadata;
+    var data = getPostData(p);
+    var metadata = data.media_metadata;
     if (metadata[id].status == 'valid') {
       return stripPrefix(metadata[id].m, "image/");
     } else {
@@ -44,11 +58,12 @@
   }
 -
   function postGalleryItems(p) {
-    if (p.gallery_data && p.gallery_data.items) {
-      return p.gallery_data.items.map((item, idx) => ({
+    var data = getPostData(p);
+    if (data.gallery_data && data.gallery_data.items) {
+      return data.gallery_data.items.map((item, idx) => ({
         id: item.media_id,
         url: `https://i.redd.it/${item.media_id}.${imgExt(p, item.media_id)}`,
-        total: p.gallery_data.items.length,
+        total: data.gallery_data.items.length,
         idx: idx+1,
       }));
     } else {
@@ -71,18 +86,17 @@
   }
 -
   function decodePostVideoUrls(p) {
+    var data = getPostData(p);
     // Video URLs have querystring separators that are HTML-encoded, so replace them.
     const expression = /&amp;/g;
 
-    var hls_url = p.secure_media && p.secure_media.reddit_video && p.secure_media.reddit_video.hls_url ? p.secure_media.reddit_video.hls_url.replace(expression, '&') : '';
+    var hls_url = data.secure_media && data.secure_media.reddit_video && data.secure_media.reddit_video.hls_url ? data.secure_media.reddit_video.hls_url.replace(expression, '&') : '';
+    var dash_url = data.secure_media && data.secure_media.reddit_video && data.secure_media.reddit_video.dash_url ? data.secure_media.reddit_video.dash_url.replace(expression, '&') : '';
 
-    var dash_url = p.secure_media && p.secure_media.reddit_video && p.secure_media.reddit_video.dash_url ? p.secure_media.reddit_video.dash_url.replace(expression, '&') : '';
+    var fallback_url = data.secure_media && data.secure_media.reddit_video && data.secure_media.reddit_video.fallback_url ? data.secure_media.reddit_video.fallback_url.replace(expression, '&') : '';
 
-    var fallback_url = p.secure_media && p.secure_media.reddit_video && p.secure_media.reddit_video.fallback_url ? p.secure_media.reddit_video.fallback_url.replace(expression, '&') : '';
-
-    var scrubber_url = p.secure_media && p.secure_media.reddit_video && p.secure_media.reddit_video.scrubber_media_url ? p.secure_media.reddit_video.scrubber_media_url.replace(expression, '&') : '';
-
-    var poster_url = p.preview && p.preview.images ? p.preview.images[0].source.url.replace(expression, '&') : '';
+    var scrubber_url = data.secure_media && data.secure_media.reddit_video && data.secure_media.reddit_video.scrubber_media_url ? data.secure_media.reddit_video.scrubber_media_url.replace(expression, '&') : '';
+    var poster_url = data.preview && data.preview.images ? data.preview.images[0].source.url.replace(expression, '&') : '';
 
     return [hls_url, dash_url, fallback_url, scrubber_url, poster_url];
   }
